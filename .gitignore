@@ -3,4 +3,6 @@
 /gen_mybatis_local.py
 /gen_mybatis_admin_local.py
 
+# intellij
 .idea
+gen-mybatis.iml

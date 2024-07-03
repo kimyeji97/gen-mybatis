@@ -2,3 +2,5 @@
 /__pycache__/*
 /gen_mybatis_local.py
 /gen_mybatis_admin_local.py
+
+.idea

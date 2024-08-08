@@ -62,7 +62,7 @@ gen_domain_package = "com.innerwave.platform.base.gen.domain"
 
 
 
-from gen_config import FIELD_NAME_ENUM_TYPES, ENUM_PACKAGE_FULL_PATH, DB_CONNECTION_OPTS, DB_SCHEMA
+from gen_config_temp import FIELD_NAME_ENUM_TYPES, ENUM_PACKAGE_FULL_PATH, DB_CONNECTION_OPTS, DB_SCHEMA
 
 def rreplace(s, old, new, occurrence):
     li = s.rsplit(old, occurrence)

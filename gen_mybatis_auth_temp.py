@@ -193,29 +193,29 @@ gen_domain_package = "com.innerwave.core.gen.domain"
 #     return "\n".join(source_prefix + source)
 
 
-def get_ex_model_code(table,fields , mapper_package, model_package):
-    tname = table.table_name
-    core_table_class_name = to_class_name(tname) + 'Core'
-    table_class_name = to_class_name(tname)
-    # table_field_name = to_field_name(tname)
-    source_prefix = []
-    source_prefix.append("package {};".format(model_package))
-    source_prefix.append("")
-    # source_prefix.append("import org.apache.commons.lang3.builder.ToStringBuilder;")
-    source_prefix.append("import com.innerwave.core.gen.domain." + core_table_class_name  + ";")
-    source_prefix.append("import lombok.Data;")
-    source_prefix.append("import lombok.EqualsAndHashCode;")
-
-    source = []
-    source.append("@Data")
-    source.append("@EqualsAndHashCode(callSuper=false)")
-    source.append("public class {} extends {}".format(table_class_name, core_table_class_name))
-    source.append("{")
-    source.append("}")
-
-    source_prefix.append("")
-    source_prefix.append("")
-    return "\n".join(source_prefix + source)
+# def get_ex_model_code(table,fields , mapper_package, model_package):
+#     tname = table.table_name
+#     core_table_class_name = to_class_name(tname) + 'Core'
+#     table_class_name = to_class_name(tname)
+#     # table_field_name = to_field_name(tname)
+#     source_prefix = []
+#     source_prefix.append("package {};".format(model_package))
+#     source_prefix.append("")
+#     # source_prefix.append("import org.apache.commons.lang3.builder.ToStringBuilder;")
+#     source_prefix.append("import com.innerwave.core.gen.domain." + core_table_class_name  + ";")
+#     source_prefix.append("import lombok.Data;")
+#     source_prefix.append("import lombok.EqualsAndHashCode;")
+#
+#     source = []
+#     source.append("@Data")
+#     source.append("@EqualsAndHashCode(callSuper=false)")
+#     source.append("public class {} extends {}".format(table_class_name, core_table_class_name))
+#     source.append("{")
+#     source.append("}")
+#
+#     source_prefix.append("")
+#     source_prefix.append("")
+#     return "\n".join(source_prefix + source)
 
 def get_mapper_code(table, fields, mapper_package, model_package):
     tname = table.table_name

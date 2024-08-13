@@ -7,7 +7,7 @@ DB 스키마 비교용 스크립트
 @author : Gwanggeun Yoo
 """
 
-import sys , os, io ,re
+import sys , os
 import datetime
 
 __IS_VERSION_3__= sys.version_info.major == 3
@@ -15,7 +15,7 @@ __IS_VERSION_3__= sys.version_info.major == 3
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
 
-from gen_config import cmp_cons, con_schema
+from old.gen_config import cmp_cons, con_schema
 
 con1 = cmp_cons[0]
 con2 = cmp_cons[1]

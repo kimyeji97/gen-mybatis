@@ -7,34 +7,58 @@ import sys, os
 # 전역 변수
 ######################################################################################
 
+
 __IS_VERSION_3__ = sys.version_info.major == 3
 __IS_WINDOW__ = os.name == 'Windows' or os.name == 'nt'
 __GEN_TARGET__ = ['domain', 'mapper', 'xml']
+__TEMP_DIR__ = 'C:\\Temp\generator' if __IS_WINDOW__ else os.path.join(os.path.expanduser("~"), "Temp", "generator")
+
+_SP4 = ' ' * 4
+_SP8 = ' ' * 8
+_SP12 = ' ' * 12
 
 ######################################################################################
 # 디비 접속 정보
 ######################################################################################
 
+DB_ENGIN = ['postgresql', 'mysql']
+
 # gen 작업 디비 접속 옵션
+# DB_CONNECTION_OPTS = {
+#     'engin': DB_ENGIN[1]
+#     , 'options': {
+#         'host': 'metamarketing-instance-1.cnzcxy7quzcs.ap-northeast-2.rds.amazonaws.com'
+#         , 'port': 3306
+#         , 'database': 'metamarket'
+#         , 'user': 'adopadmin'
+#         , 'password': 'Adop*^14'
+#     }
+# }
+
 DB_CONNECTION_OPTS = {
-    'user': 'mainn'
-    , 'password': 'qhdks@00'
-    , 'host': '192.168.10.240'
-    , 'port': 8433
-    , 'database': 'mainn'
+    'engin': DB_ENGIN[1]
+    , 'options': {
+        'host': 'insight-master.cnzcxy7quzcs.ap-northeast-2.rds.amazonaws.com'
+        , 'port': 3306
+        , 'database': 'insight'
+        , 'user': 'adopadmin'
+        , 'password': 'Adop*^14'
+    }
 }
 
 # 스키마 비교 대상 디비 접속 옵션
 CMP_DB_CONNECTIONS_OPTS = [
     {
-        'user': 'mainn'
+        'engin': DB_ENGIN[0]
+        , 'user': 'mainn'
         , 'password': 'qhdks@00'
         , 'host': '192.168.10.11'
         , 'port': 8433
         , 'database': 'mainn'
     },
     {
-        'user': 'mainn'
+        'engin': DB_ENGIN[0]
+        , 'user': 'mainn'
         , 'password': 'qhdks@00'
         , 'host': '192.168.10.240'
         , 'port': 15432
@@ -44,15 +68,6 @@ CMP_DB_CONNECTIONS_OPTS = [
 
 # 디비 스키마
 DB_SCHEMA = "public"
-
-######################################################################################
-# Java 파일 경로
-######################################################################################
-
-
-# enum 파일 패키지 전체 경로
-ENUM_PACKAGE_FULL_PATH = 'com.innerwave.PlatformCodes'
-
 
 ######################################################################################
 # Enum <-> Columns 매핑

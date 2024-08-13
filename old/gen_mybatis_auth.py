@@ -9,23 +9,14 @@ Also It generates mybatis xml, mapper and model object for ttbb coupon system.
 @author : Gwanggeun Yoo
 """
 
-import sys , os, io ,re
+import sys , os, re
 import datetime
 
 
 arguments = sys.argv
 print(arguments)
 list_target = ['domain','mapper','xml']
-gen_targets = []
-category_targets = []
-all_targets = True
-
-for gt in arguments[1:]:
-    if gt.startswith("-C"):
-        all_targets = False
-        category_targets.append(gt[2:])
-    else :
-        gen_targets.append(gt)
+gen_targets = arguments[1:]
 
 
 __IS_VERSION_3__= sys.version_info.major == 3
@@ -34,35 +25,31 @@ _IS_WINDOW_ = os.name == 'Windows' or os.name == 'nt'
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
 
-main_path = os.path.realpath(os.path.join(dir_path, '../../../platform/platform-base/src/main' ))
+main_path = os.path.realpath(os.path.join(dir_path, '../../../innerwave-aar/src/main' ))
 xml_path = os.path.join(main_path, 'resources', 'mybatis','gen')
 
-#main_path = os.path.realpath(os.path.join(dir_path, '../../../platform/common-base/src/main' ))
-main_path = os.path.realpath(os.path.join(dir_path, '../../../platform/platform-base/src/main' ))
-mapper_path =os.path.join(main_path, 'java', 'com','innerwave','platform','base','gen','mapper')
+mapper_path =os.path.join(main_path, 'java', 'com','innerwave','aar','gen','mapper')
 
-main_path = os.path.realpath(os.path.join(dir_path, '../../../platform/platform-base/src/main' ))
-model_path =os.path.join(main_path, 'java', 'com','innerwave','platform','base','gen','domain')
+main_path = os.path.realpath(os.path.join(dir_path, '../../../innerwave-core/src/main' ))
+model_path =os.path.join(main_path, 'java', 'com','innerwave', 'core','gen','domain')
 
 
 
 is_remove_cd = False # _CD 제거 여부
 is_remove_yn = False # _YN 제거 여부
 is_use_date_format = False # json 날짜포맷 사용 여부
-is_use_time_format = True # json 시간포맷 사용 여부
 regist_column_nm = 'REG_DT'
 register_column_nm = 'REG_ID'
 update_column_nm = 'UPD_DT'
 updater_column_nm = 'UPD_ID'
 
-base_domain_colums = [regist_column_nm, register_column_nm, update_column_nm,
-                      updater_column_nm]  # BaseDomain으로 처리할 컬럼 리스트
-gen_domain_package = "com.innerwave.platform.base.gen.domain"
+base_domain_colums = [regist_column_nm, register_column_nm, update_column_nm, updater_column_nm] # BaseDomain으로 처리할 컬럼 리스트
+gen_domain_package = "com.innerwave.core.gen.domain"
 
 
 
 
-from gen_config import FIELD_NAME_ENUM_TYPES, ENUM_PACKAGE, con_opts, con_schema
+from old.gen_config import FIELD_NAME_ENUM_TYPES, ENUM_PACKAGE, con_opts, con_schema
 
 def rreplace(s, old, new, occurrence):
     li = s.rsplit(old, occurrence)
@@ -138,13 +125,7 @@ def get_model_code(table,fields , mapper_package, model_gen_package):
                 imp_str = "import com.fasterxml.jackson.annotation.JsonFormat;"
                 if imp_str not in source_prefix:
                     source_prefix.append(imp_str)
-        elif(is_use_date_format is False and is_use_time_format):
-            if field.type == 'time':
-                imp_str = "import com.fasterxml.jackson.annotation.JsonFormat;"
-                if imp_str not in source_prefix:
-                    source_prefix.append(imp_str)
 
-        if(is_use_date_format):
             if field.type.startswith("datetime(3") or field.type.startswith("timestamp(3"):
                 source.append('    @DateTimeFormat(pattern="yyyy-MM-dd HH:mm:ss.SSS")')
                 source.append('    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss.SSS")')
@@ -154,11 +135,6 @@ def get_model_code(table,fields , mapper_package, model_gen_package):
             elif field.type == 'datetime'or field.type == 'timestamp':
                 source.append('    @DateTimeFormat(pattern="yyyy-MM-dd HH:mm:ss")')
                 source.append('    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")')
-
-
-        if(is_use_time_format):
-            if field.type == 'time':
-                source.append('    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm:ss")')
 
         # source.append('    @Column(columnName = "{}", type = "{}", length = {}, nullable = {})'.format(f, field.type, f.))
         source.append('    @Column(columnName = "{}", type = "{}", nullable = {}, primary = {})'.format(f, field.type, bool_str(field.nullable), bool_str(field.is_pk)))
@@ -226,7 +202,7 @@ def get_ex_model_code(table,fields , mapper_package, model_package):
     source_prefix.append("package {};".format(model_package))
     source_prefix.append("")
     # source_prefix.append("import org.apache.commons.lang3.builder.ToStringBuilder;")
-    source_prefix.append("import com.innerwave.platform.base.gen.domain." + core_table_class_name  + ";")
+    source_prefix.append("import com.innerwave.core.gen.domain." + core_table_class_name  + ";")
     source_prefix.append("import lombok.Data;")
     source_prefix.append("import lombok.EqualsAndHashCode;")
 
@@ -244,16 +220,15 @@ def get_ex_model_code(table,fields , mapper_package, model_package):
 def get_mapper_code(table, fields, mapper_package, model_package):
     tname = table.table_name
     table_class_name = to_class_name(tname)
-    corePackage = "com.innerwave.platform.base.gen.mapper"
+    corePackage = "com.innerwave.aar.gen.mapper"
 
     mapper = """package %(mapper_package)s;
 
 import %(gen_package)s.%(table_class_name)sMapperCore;
-import %(model_package)s.%(table_class_name)s;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-public interface %(table_class_name)sMapper extends %(table_class_name)sMapperCore<%(table_class_name)s>
+public interface %(table_class_name)sMapper extends %(table_class_name)sMapperCore
 {
     
 }
@@ -270,7 +245,7 @@ def gen_mapper_gen_code(table,fields , mapper_package, model_package):
     table_field_name = to_field_name(tname)
     key_params = makeMapperKeyParams(fields)
     # print (key_params)
-    corePackage = "com.innerwave.platform.base.gen.mapper"
+    corePackage = "com.innerwave.aar.gen.mapper"
 
     sequence_mapper_src = ''
     if table.sequence is not None:
@@ -286,39 +261,37 @@ def gen_mapper_gen_code(table,fields , mapper_package, model_package):
 
     mapper =  """package %(mapper_package)s;
 
+import %(model_package)s.%(table_class_name)s;
 import java.util.List;
 %(key_params_import)s
 
-public interface %(table_class_name)sMapperCore<T>
+public interface %(table_class_name)sMapperCore
 {
     // ########### START Gnerated Area ###################
     // {
-    int create%(table_class_name)s(T %(table_field_name)s);
+    int create%(table_class_name)s(%(table_class_name)s %(table_field_name)s);
     
-    T create%(table_class_name)sReturn(T %(table_field_name)s);
+    %(table_class_name)s create%(table_class_name)sReturn(%(table_class_name)s %(table_field_name)s);
 
-    int create%(table_class_name)sList(List<T> %(table_field_name)sList);
+    int create%(table_class_name)sList(List<%(table_class_name)s> %(table_field_name)sList);
 
-    T read%(table_class_name)s(T %(table_field_name)s); 
+    %(table_class_name)s read%(table_class_name)s(%(table_class_name)s %(table_field_name)s); 
 
-    List<T> list%(table_class_name)s(T %(table_field_name)s);
+    %(table_class_name)s read%(table_class_name)sByKey(%(key_params)s);
 
-    int update%(table_class_name)s(T %(table_field_name)s);
+    List<%(table_class_name)s> list%(table_class_name)s(%(table_class_name)s %(table_field_name)s);
 
-    T update%(table_class_name)sReturn(T %(table_field_name)s);
+    int update%(table_class_name)s(%(table_class_name)s %(table_field_name)s);
 
-    int updateForce(T %(table_field_name)s);
+    %(table_class_name)s update%(table_class_name)sReturn(%(table_class_name)s %(table_field_name)s);
 
-    T updateForceReturn(T %(table_field_name)s);
+    int updateForce(%(table_class_name)s %(table_field_name)s);
 
-    int delete%(table_class_name)s(T %(table_field_name)s);
-""" + ( """
+    %(table_class_name)s updateForceReturn(%(table_class_name)s %(table_field_name)s);
 
-    T read%(table_class_name)sByKey(%(key_params)s);
+    int delete%(table_class_name)s(%(table_class_name)s %(table_field_name)s);
 
     int delete%(table_class_name)sByKey(%(key_params)s);
-""" if len(filterPk(table)) > 0 else "") + """
-
 %(sequence_mapper_src)s
     // }
     // ########### END Gnerated Area #####################
@@ -330,7 +303,6 @@ public interface %(table_class_name)sMapperCore<T>
     // ###########################################################
 }
 """
-
     return mapper % {'table_class_name' : table_class_name
         ,'table_field_name' : table_field_name
         ,'mapper_package':corePackage
@@ -365,15 +337,6 @@ def makeWhere(fields) :
     return SP8 + ("\n" + SP8).join(xml)
 
 
-
-def filterPk(table) :
-    fields = table.fields
-    pk_list = []
-    for field in fields:
-        if field.is_pk == True:
-            pk_list.append(field)
-    return pk_list
-
 def makeMapperKeyParams(fields):
     imports = []
     params = []
@@ -390,12 +353,13 @@ def makeMapperKeyParams(fields):
 
     if len(params) > 0:
         imports.append("import org.apache.ibatis.annotations.Param;")
-        params[-1] = params[-1][0:-1]
 
+    params[-1] = params[-1][0:-1]
     return {
         'params_str' : (" ").join(params)
         ,'import_str' : ("\n").join(imports)
     }
+
 
 def makeWherePk(table) :
     fields = table.fields
@@ -434,9 +398,7 @@ def makeColumns(table,fields,with_alias, only_pk) :
             xml.append("    {}{},".format(alias,regist_column_nm))
         if table.has_updated_time():
             xml.append("    {}{},".format(alias,update_column_nm))
-
-    if len(xml) > 0:
-        xml[-1] = xml[-1][0:-1]
+    xml[-1] = xml[-1][0:-1]
     return SP8 + ("\n" + SP8).join(xml)
 
 def makeValues(table,fields) :
@@ -473,6 +435,7 @@ def makeValuesForeach(table, fields):
         f = field.name
         if f == regist_column_nm or f == update_column_nm or field.is_auto_increment():
             continue
+        # print (field.default)
         if field.sequence_name:
             xml.append("        COALESCE(#{{item.{}}},NEXTVAL('{}')),".format(field.java_field_name,field.sequence_name))
         elif field.nullable == False and field.default:
@@ -516,6 +479,7 @@ def makeInsert(table,fields) :
         f = field.name
         if f == regist_column_nm or f == update_column_nm or field.is_auto_increment():
             continue
+        # print (field.default)
         if field.sequence_name:
             xml.append("    COALESCE(#{{{}}},NEXTVAL('{}')),".format(field.java_field_name,field.sequence_name))
         elif field.nullable == False and field.default:
@@ -828,6 +792,13 @@ def make_external_xml_file(table, fields , mapper_package , model_package) :
         <include refid="selectSql" />
     </select>
 
+    <select id="read{table_class_name}ByKey" resultType="{model_package}.{table_class_name}">
+        <include refid="{table_ns}.selectFromSql" />
+        <where>
+            <include refid="{table_ns}.pkConditionSql" />
+        </where>
+    </select>
+
     <select id="list{table_class_name}" parameterType="{model_package}.{table_class_name}" resultType="{model_package}.{table_class_name}">
         <include refid="selectSql" />
     </select>
@@ -866,28 +837,11 @@ def make_external_xml_file(table, fields , mapper_package , model_package) :
     <delete id="delete{table_class_name}" parameterType="{model_package}.{table_class_name}">
         <include refid="{table_ns}.deleteSql" />
     </delete>
-""".format(mapper_package = mapper_package
-           ,model_package = model_package
-           ,table_ns = table_ns
-           ,table_class_name = table_class_name
-           ,sequence_xml = sequence_xml) + ("""
-           
-    <select id="read{table_class_name}ByKey" resultType="{model_package}.{table_class_name}">
-        <include refid="{table_ns}.selectFromSql" />
-        <where>
-            <include refid="{table_ns}.pkConditionSql" />
-        </where>
-    </select>
 
     <delete id="delete{table_class_name}ByKey">
         <include refid="{table_ns}.deleteByKeySql" />
     </delete>
-""".format(mapper_package = mapper_package
-           ,model_package = model_package
-           ,table_ns = table_ns
-           ,table_class_name = table_class_name
-           ,sequence_xml = sequence_xml) if len(filterPk(table)) > 0 else "") +"""
-           
+
     {sequence_xml}
 
     <!--
@@ -898,6 +852,7 @@ def make_external_xml_file(table, fields , mapper_package , model_package) :
     #############################################################
     -->
 </mapper>
+
 """.format(mapper_package = mapper_package
            ,model_package = model_package
            ,table_ns = table_ns
@@ -975,10 +930,10 @@ class TableField:
 
         # print('key:{} , default : {} -> {}'.format(kwargs['key'], self.default, type(self.default)))
 
-        # if self.default :
-        #     if self.java_type == 'String':
-        #         self.default = "'" + self.default + "'"
-        # print(self.default)
+        if self.default :
+            if self.java_type == 'String':
+                self.default = "'" + self.default + "'"
+
     def is_auto_increment(self):
         return self.key == 'UNI' and self.extra == 'auto_increment'
     def _mk_sequence_name(self):
@@ -1017,9 +972,6 @@ class TableField:
         elif type_name.startswith("date"):
             self.java_type_package = 'java.util.Date'
             return 'Date'
-        elif type_name.startswith("time"):
-            self.java_type_package = 'java.time.LocalTime'
-            return 'LocalTime'
         elif type_name.startswith("bigint") or type_name.startswith('serial') or type_name.startswith('int8'):
             if self.name in FIELD_NAME_ENUM_TYPES:
                 self.java_type_package = ENUM_PACKAGE + "." + FIELD_NAME_ENUM_TYPES[self.name]
@@ -1047,13 +999,6 @@ class TableField:
         elif type_name.startswith("_varchar"):
             self.java_type_package = 'java.util.List'
             return 'List<String>'
-        elif type_name.startswith("_int"):
-            self.java_type_package = 'java.util.List'
-            if self.name in FIELD_NAME_ENUM_TYPES:
-                self.java_type_package = ENUM_PACKAGE + "." + FIELD_NAME_ENUM_TYPES[self.name]
-                return "List<{}>".format(FIELD_NAME_ENUM_TYPES[self.name])
-            else:
-                return 'List<Integer>'
         else:
             if self.name in FIELD_NAME_ENUM_TYPES:
                 self.java_type_package = ENUM_PACKAGE + "." + FIELD_NAME_ENUM_TYPES[self.name]
@@ -1128,16 +1073,16 @@ def get_field_info(table_name , connection_opts, con_schema, field_attrs = {}):
    , is_nullable as Null
    , b.key as Key
    , c.column_default  as Default
-FROM information_schema.columns as c
-   LEFT JOIN (
-        SELECT CC.COLUMN_NAME AS column_name,'PRI' as Key
-	    FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS       TC
-	        join INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE CC
-	            on (TC.TABLE_CATALOG = CC.TABLE_CATALOG AND TC.TABLE_SCHEMA = CC.TABLE_SCHEMA AND TC.TABLE_NAME = CC.TABLE_NAME AND TC.CONSTRAINT_NAME = CC.CONSTRAINT_NAME)
-	    WHERE 
-	 	    TC.TABLE_NAME = %(table_name)s AND TC.CONSTRAINT_TYPE = 'PRIMARY KEY'
+FROM 
+   information_schema.columns as c
+   left join (SELECT CC.COLUMN_NAME AS column_name,'PRI' as Key
+	  FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS       TC
+	      join INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE CC
+	      on (TC.TABLE_CATALOG = CC.TABLE_CATALOG AND TC.TABLE_SCHEMA = CC.TABLE_SCHEMA AND TC.TABLE_NAME = CC.TABLE_NAME AND TC.CONSTRAINT_NAME = CC.CONSTRAINT_NAME)
+	 WHERE 
+	 	TC.TABLE_NAME = %(table_name)s AND TC.CONSTRAINT_TYPE = 'PRIMARY KEY'
 	) as b on (c.column_name = b.column_name)
-    LEFT JOIN pg_constraint p ON c.table_name = p.conrelid::regclass::text AND p.contype = 'p'
+    JOIN pg_constraint p ON c.table_name = p.conrelid::regclass::text AND p.contype = 'p'
 WHERE 
    table_schema = %(con_schema)s and table_name = %(table_name)s
 order by array_position(p.conkey, c.ordinal_position)
@@ -1265,85 +1210,27 @@ def generate_mybatis(table_name, category, mapper_package, model_package, sequen
 def generate_mybatis_files():
 
     #########################################
-    mapper_base_pkg = "com.innerwave.platform.common.base.mapper"
-    model_base_pkg = "com.innerwave.platform.common.base.domain"
+    mapper_base_pkg = "com.innerwave.aar.mapper"
+    model_base_pkg = "com.innerwave.core.domain"
     #########################################
 
-    category = 'common'
-    if all_targets or category in category_targets:
-        mapper_package = mapper_base_pkg + "." + category
-        model_package  = model_base_pkg + "." + category
+    # category = ''
+    # mapper_package = mapper_base_pkg
+    # model_package  = model_base_pkg
+    category = 'auth'
+    mapper_package = mapper_base_pkg + "." + category
+    model_package  = model_base_pkg + "." + category
 
-        generate_mybatis('TB_SYS_GLOBAL_VAR', category, mapper_package, model_package)
-        generate_mybatis('TB_DYNAMIC_CD_ITEM', category, mapper_package, model_package, sequence='tb_dynamic_cd_item_cd_id_seq')
-
-
-    category = 'account'
-    if all_targets or category in category_targets:
-        mapper_package = mapper_base_pkg + "." + category
-        model_package  = model_base_pkg + "." + category
-
-    category = 'employee'
-    if all_targets or category in category_targets:
-        mapper_package = mapper_base_pkg + "." + category
-        model_package  = model_base_pkg + "." + category
-
-        generate_mybatis('TB_EMP', category, mapper_package, model_package, sequence='tb_emp_emp_sid_seq')
-        generate_mybatis('TB_EMP_CAREER', category, mapper_package, model_package, sequence='TB_EMP_CAREER_cateer_sid_seq')
-        generate_mybatis('TB_EMP_CERT', category, mapper_package, model_package, sequence='TB_EMP_CERT_CERT_SID_SEQ')
-        generate_mybatis('TB_EMP_PROJECT', category, mapper_package, model_package, sequence='TB_EMP_PROJECT_PROJECT_SID_SEQ')
-
-        generate_mybatis('TB_DEPT', category, mapper_package, model_package, sequence='tb_dept_dept_sid_seq')
-        generate_mybatis('TB_DEPT_EMP_REL', category, mapper_package, model_package)
-
-        generate_mybatis('TB_PSNL_APMNT_HIST', category, mapper_package, model_package)
-
-        generate_mybatis('tb_annual_leave', category, mapper_package, model_package)
-        generate_mybatis('TB_ANNUAL_LEAVE_USE_HIST', category, mapper_package, model_package, sequence = 'tb_annual_leave_use_hist_annual_leave_use_hist_sid_seq')
-        generate_mybatis('tb_annual_leave_provd_hist', category, mapper_package, model_package, sequence = 'tb_annual_leave_provd_hist_annual_leave_provd_hist_sid_seq')
-
-    category = 'project'
-    if all_targets or category in category_targets:
-        mapper_package = mapper_base_pkg + "." + category
-        model_package  = model_base_pkg + "." + category
-
-        generate_mybatis('TB_PROJECT', category, mapper_package, model_package, sequence='tb_project_project_sid_seq')
-        generate_mybatis('TB_PROJECT_EMP_REL', category, mapper_package, model_package)
-
-    category = 'meeting'
-    if all_targets or category in category_targets:
-        mapper_package = mapper_base_pkg + "." + category
-        model_package  = model_base_pkg + "." + category
-
-        generate_mybatis('tb_met_room', category, mapper_package, model_package, sequence = 'tb_met_room_met_room_sid_seq')
-        generate_mybatis('tb_met_schdl', category, mapper_package, model_package, sequence = 'tb_met_schdl_met_room_sid_seq')
-        generate_mybatis('tb_met_schdl_emp_rel', category, mapper_package, model_package)
-
-        generate_mybatis('TB_REPORT', category, mapper_package, model_package, sequence="tb_report_report_sid_seq")
-        generate_mybatis('TB_REPORT_file', category, mapper_package, model_package, sequence="tb_report_file_file_sid_seq")
-        generate_mybatis('tb_report_file_down_hist', category, mapper_package, model_package, sequence='tb_report_file_down_hist_down_hist_sid_seq')
-
-        generate_mybatis('TB_REPORT_MET_PROJECT_REL', category, mapper_package, model_package)
-
-    category = 'management'
-    if all_targets or category in category_targets:
-        mapper_package = mapper_base_pkg + "." + category
-        model_package  = model_base_pkg + "." + category
-
-        generate_mybatis('tb_api_log', category, mapper_package, model_package)
-        generate_mybatis('tb_notice', category, mapper_package, model_package, sequence='tb_notice_notice_sid_seq')
-        generate_mybatis('TB_DOCU_TMPL', category, mapper_package, model_package, sequence='TB_DOCU_TMPL_tmpl_sid_seq')
-        generate_mybatis('TB_MESSAGE_HIST', category, mapper_package, model_package, sequence='TB_MESSAGE_HIST_MESSAGE_HIST_SID_SEQ')
-        generate_mybatis('TB_MESSAGE_TPL', category, mapper_package, model_package)
-
-    category = 'schedule'
-    if all_targets or category in category_targets:
-        mapper_package = mapper_base_pkg + "." + category
-        model_package  = model_base_pkg + "." + category
-
-        generate_mybatis('tb_emp_schdl', category, mapper_package, model_package, sequence="tb_emp_schdl_emp_schdl_sid_seq")
-        generate_mybatis('tb_ofcl_schdl', category, mapper_package, model_package, sequence='tb_ofcl_schdl_ofcl_schdl_sid_seq')
-
-
+    generate_mybatis('tb_api', category, mapper_package, model_package, sequence = 'tb_api_api_sid_seq')
+    generate_mybatis('tb_common_cd', category, mapper_package, model_package)
+    generate_mybatis('tb_menu', category, mapper_package, model_package, sequence = 'tb_menu_menu_sid_seq')
+    generate_mybatis('tb_psst_login', category, mapper_package, model_package)
+    generate_mybatis('tb_role', category, mapper_package, model_package)
+    generate_mybatis('tb_user', category, mapper_package, model_package, sequence = 'tb_user_user_sid_seq')
+    generate_mybatis('tb_user_user_group_rel', category, mapper_package, model_package)
+    generate_mybatis('tb_user_group', category, mapper_package, model_package, sequence = 'tb_user_group_user_group_sid_seq')
+    generate_mybatis('tb_user_group_menu_rel', category, mapper_package, model_package)
+    generate_mybatis('tb_user_group_role_rel', category, mapper_package, model_package)
     
+
 generate_mybatis_files()

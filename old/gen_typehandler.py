@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-import sys , os, io, re
+import sys , os, re
 import datetime
 import psycopg2
 
@@ -14,7 +14,7 @@ __IS_VERSION_3__= sys.version_info.major == 3
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
 
-from gen_config import ENUM_PACKAGE, con_opts
+from old.gen_config import ENUM_PACKAGE, con_opts
 
 DATE_FORMAT="%Y%m%d.%H%M%S"
 tmpfolder = datetime.datetime.strftime(datetime.datetime.now(),DATE_FORMAT)

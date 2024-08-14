@@ -3,12 +3,12 @@
 
 import os, json
 import datetime
-import gen_config_temp as config
+import config as config
 import common as common
-import gen_xml_postgresql_temp as gen_postgresql_xml
-import gen_xml_mysql_temp as gen_mysql_xml
-import gen_model_temp as gen_model
-import gen_mapper_temp as gen_mapper
+import gen_xml_postgresql as gen_postgresql_xml
+import gen_xml_mysql as gen_mysql_xml
+import gen_model as gen_model
+import gen_mapper as gen_mapper
 import mysql.connector as mysql
 import psycopg2
 
@@ -42,6 +42,8 @@ class PackagePathInfo:
 
 # @dataclass
 class ColumnInfo:
+    period_search_start_postfix = 'Start'
+    period_search_end_postfix = 'End'
     date_format_pattern = 'yyyy-MM-dd'
     date_time_format_pattern = 'yyyy-MM-dd HH:mm:ss'
     date_time3_format_pattern = 'yyyy-MM-dd HH:mm:ss.SSS'
@@ -158,6 +160,18 @@ class TableField:
             if self.java_type == 'String':
                 self.default = "'" + self.default + "'"
 
+    def is_date(self):
+        return self.type.startswith("date") and self.type.startswith("datetime") is not True
+
+    def is_datetime(self):
+        return self.type == 'datetime' or self.type == 'timestamp'
+
+    def is_datetime3(self):
+        return self.type.startswith("datetime(3") or self.type.startswith("timestamp(3")
+
+    def is_time(self):
+        return self.type == 'time'
+
     def is_auto_increment(self):
         return self.extra == 'auto_increment'
 
@@ -242,9 +256,11 @@ class TableField:
     def _mk_null_check_string(self):
         javaField = self.java_field_name
         if self.java_type == 'String':
-            return "{} != null and {}.length() > 0".format(javaField, javaField)
+            return ["{} != null and {}.length() > 0".format(javaField, javaField)]
+        elif self.is_date() or self.is_datetime() or self.is_datetime3() or self.is_time():
+            return ["{} != null".format(javaField), "{}{} != null and {}{} != null".format(javaField, _column_info.period_search_start_postfix, javaField, _column_info.period_search_end_postfix)]
         else:
-            return "{} != null".format(javaField)
+            return ["{} != null".format(javaField)]
 
     def _mk_jackson_prop(self):
         json_props = {}
@@ -285,6 +301,9 @@ def set_base_info(p_info: PackagePathInfo, c_info: ColumnInfo):
     _package_path_info = p_info
     _column_info = c_info
 
+    print("Column Info                        : ", json.dumps(_column_info.__dict__, indent=4))
+    print("Package Path Info                  : ", json.dumps(_package_path_info.__dict__, indent=4))
+    print("Result Dir                         : ", os.path.join(config.__TEMP_DIR__, 'mybatis-gen-' + tmpfolder))
 
 def get_tables(connection_opts, con_schema):
     rows = []
@@ -327,7 +346,8 @@ def get_field_info(table_name, connection_opts, con_schema, field_attrs={}):
 
     global gen_xml
 
-    print('connection_opts: ', connection_opts)
+    # print('DB Connection Started.. (Get table schema info)')
+    # print('DB Connection Options              : ', connection_opts)
     if connection_opts['engin'] == config.DB_ENGIN[0]:
 
         gen_xml = gen_postgresql_xml
@@ -401,11 +421,12 @@ def get_field_info(table_name, connection_opts, con_schema, field_attrs={}):
             map_row['field_attrs'] = field_attrs
             field = TableField(**map_row)
             rows.append(field)
-            print(json.dumps(field.__dict__))
+            # print(json.dumps(field.__dict__))
         cursor.close()
         cnx.close()
         pass
 
+    # print('DB Connection End..')
     return rows
 
 
@@ -439,7 +460,7 @@ def generate_mybatis(gen_targets, table_name, category, mapper_package, model_pa
     db_fields = get_field_info(table_name, config.DB_CONNECTION_OPTS, config.DB_SCHEMA, field_attrs)
 
     if (len(db_fields) < 1):
-        print("\r\nFAIL !!! : {} ====> no colums\r\n".format(table_name))
+        print("\r\nGenerated FAIL !!! : {} ====> no colums\r\n".format(table_name))
         return
 
     table = Table(table_name, db_fields, pk=field_attrs.get('pk'))
@@ -453,23 +474,23 @@ def generate_mybatis(gen_targets, table_name, category, mapper_package, model_pa
 
     # Results ...
     if len(gen_targets) == 0 or is_make_model:
-        in_model_src = gen_model.get_model_code(_column_info, _package_path_info, table, db_fields, mapper_package,
-                                                _package_path_info.core_domain_package)
-        ex_model_src = gen_model.get_ex_model_code(_column_info, _package_path_info, table, db_fields, mapper_package, model_package)
+        in_model_src = gen_model.make_java_domain_core(_column_info, _package_path_info, table, db_fields, mapper_package,
+                                                       _package_path_info.core_domain_package)
+        ex_model_src = gen_model.make_java_domain_ex(_column_info, _package_path_info, table, db_fields, mapper_package, model_package)
 
         write_file_core(_package_path_info.model_path, class_name + "Core.java", in_model_src)
         write_file('domain', category, class_name + ".java", ex_model_src)
 
     if len(gen_targets) == 0 or is_make_mapper:
-        gen_mapper_src = gen_mapper.gen_mapper_gen_code(_column_info, _package_path_info, table, db_fields, mapper_package, model_package)
-        mapper_src = gen_mapper.get_mapper_code(_column_info, _package_path_info, table, db_fields, mapper_package, model_package)
+        gen_mapper_src = gen_mapper.make_mapper_core(_column_info, _package_path_info, table, db_fields, mapper_package, model_package)
+        mapper_src = gen_mapper.make_mapper_ex(_column_info, _package_path_info, table, db_fields, mapper_package, model_package)
 
         write_file_core(_package_path_info.mapper_path, class_name + "MapperCore.java", gen_mapper_src)
         write_file('mapper', category, class_name + "Mapper.java", mapper_src)
 
     if len(gen_targets) == 0 or is_make_xml:
-        in_xml_src = gen_xml.make_internal_xml_file(_column_info, _package_path_info, table, db_fields)
-        ex_xml_src = gen_xml.make_external_xml_file(_column_info, _package_path_info, table, db_fields, mapper_package, model_package)
+        in_xml_src = gen_xml.make_xml_core(_column_info, _package_path_info, table, db_fields)
+        ex_xml_src = gen_xml.make_xml_ex(_column_info, _package_path_info, table, db_fields, mapper_package, model_package)
 
         write_file_core(_package_path_info.xml_path, tns.upper() + ".xml", in_xml_src)
         write_file('xml', category, class_name + "Mapper.xml", ex_xml_src)

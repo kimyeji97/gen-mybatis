@@ -7,7 +7,7 @@ _column_info = None
 _package_path_info = None
 
 
-def get_mapper_code(_c_info, _p_info, table, fields, mapper_package, model_package):
+def make_mapper_ex(_c_info, _p_info, table, fields, mapper_package, model_package):
     global _column_info
     global _package_path_info
     _column_info = _c_info
@@ -31,7 +31,7 @@ public interface %(table_class_name)sMapper extends %(table_class_name)sMapperCo
         , 'gen_package': _package_path_info.core_mapper_package}
 
 
-def gen_mapper_gen_code(_c_info, _p_info, table, fields, mapper_package, model_package):
+def make_mapper_core(_c_info, _p_info, table, fields, mapper_package, model_package):
     global _column_info
     global _package_path_info
     _column_info = _c_info

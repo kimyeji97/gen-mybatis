@@ -1,14 +1,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import gen_config_temp as config
+import config as config
 import common as common
-
 
 _column_info = None
 _package_path_info = None
 
-def makeWhere(fields) :
+
+def make_sql_where_all(fields):
     xml = []
     javaFieldList = ['uri', 'host', 'method']
     for field in fields:
@@ -19,15 +19,22 @@ def makeWhere(fields) :
         javaField = field.java_field_name
         null_check_string = field.null_check_string
         oper = '='
-        if (javaField in javaFieldList ) or f.endswith("NM") or f.endswith("NAME"):
+        if (javaField in javaFieldList) or common.endswith_ignore_case(f, "NM", "NAME"):
             oper = 'LIKE'
 
-        xml.append("<if test=\"{}\">".format(null_check_string))
-        xml.append("    AND {} {} #{{{}}}".format(f,oper,javaField))
+        xml.append("<if test=\"{}\">".format(null_check_string[0]))
+        xml.append("    AND {} {} #{{{}}}".format(f, oper, javaField))
         xml.append("</if>")
+
+        if field.is_date() or field.is_datetime() or field.is_datetime3() or field.is_time():
+            xml.append("<if test=\"{}\">".format(null_check_string[1]))
+            xml.append("    AND {} BETWEEN #{{{}{}}} AND #{{{}{}}}".format(f, javaField, _column_info.period_search_start_postfix, javaField, _column_info.period_search_end_postfix))
+            xml.append("</if>")
+
     return config._SP8 + ("\n" + config._SP8).join(xml)
 
-def makeWherePk(table):
+
+def make_sql_where_pk(table):
     fields = table.fields
     xml = []
     for field in fields:
@@ -39,7 +46,7 @@ def makeWherePk(table):
     return config._SP12 + ("\n" + config._SP12).join(xml)
 
 
-def makeColumns(table, fields, with_alias, only_pk):
+def make_sql_columns(table, fields, with_alias, only_pk):
     alias = ""
     if with_alias:
         alias = table.table_alias + "."
@@ -58,7 +65,7 @@ def makeColumns(table, fields, with_alias, only_pk):
     return config._SP8 + ("\n" + config._SP8).join(xml)
 
 
-def makeValues(table, fields, isDupluicateUpdate = False):
+def make_sql_values(table, fields, isDupluicateUpdate=False):
     xml = []
     for field in fields:
         f = field.name
@@ -87,7 +94,7 @@ def makeValues(table, fields, isDupluicateUpdate = False):
     return config._SP8 + ("\n" + config._SP8).join(xml)
 
 
-def makeValuesForeach(table, fields):
+def make_sql_foreach_values(table, fields):
     tname = table.table_name
     table_field_name = common.to_field_name(tname)
     xml = []
@@ -117,7 +124,7 @@ def makeValuesForeach(table, fields):
     return config._SP8 + ("\n" + config._SP8).join(xml)
 
 
-def makeInsert(table, fields):
+def make_sql_insert(table, fields):
     table_name = table.table_name
     xml = []
     xml.append("INSERT INTO {} (".format(table_name))
@@ -136,7 +143,7 @@ def makeInsert(table, fields):
         if field.is_auto_increment():
             continue
 
-        if (_column_info.include_insert_dt_columns(f)) or ( _column_info.include_update_dt_columns(f)):
+        if (_column_info.include_insert_dt_columns(f)) or (_column_info.include_update_dt_columns(f)):
             xml.append("    COALESCE(#{{{}}},CURRENT_TIMESTAMP),".format(field.java_field_name))
         else:
             if field.sequence_name:
@@ -153,7 +160,7 @@ def makeInsert(table, fields):
     return config._SP8 + ("\n" + config.SP8).join(xml)
 
 
-def makeUpdateSelective(table, fields):
+def make_sql_update_selective(table, fields):
     table_name = table.table_name
     xml = []
     xml.append("UPDATE {} ".format(table_name))
@@ -176,7 +183,7 @@ def makeUpdateSelective(table, fields):
     return config._SP8 + ("\n" + config._SP8).join(xml)
 
 
-def makeUpdate(table, fields):
+def make_sql_update(table, fields):
     table_name = table.table_name
     xml = []
     xml.append("UPDATE {} ".format(table_name))
@@ -197,7 +204,7 @@ def makeUpdate(table, fields):
     return config._SP8 + ("\n" + config._SP8).join(xml)
 
 
-def makeUpdateWhere(table):
+def make_sql_update_where(table):
     fields = table.fields
     xml = []
     is_first = True
@@ -219,7 +226,7 @@ def makeUpdateWhere(table):
     return config._SP12 + ("\n" + config._SP12).join(xml)
 
 
-def makeSelectDefault(table, fields):
+def make_sql_select_default(table, fields):
     table_name = table.table_name
     field_str = ""
     for field in fields:
@@ -235,7 +242,7 @@ def makeSelectDefault(table, fields):
     """.format(field_str=field_str, table_name=table_name)
 
 
-def make_internal_xml_file(_c_info, _p_info, table, fields):
+def make_xml_core(_c_info, _p_info, table, fields):
     global _column_info
     global _package_path_info
     _column_info = _c_info
@@ -244,18 +251,18 @@ def make_internal_xml_file(_c_info, _p_info, table, fields):
     tname = table.table_name
     tname_alias = table.table_alias
     table_ns = table.table_namespace
-    where_if = makeWhere(fields)
-    where_pk_if = makeWherePk(table)
-    columns_sql = makeColumns(table, fields, False, False)
-    columns_alias_sql = makeColumns(table, fields, True, False)
-    pks_sql = makeColumns(table, fields, False, True)
-    pks_alias_sql = makeColumns(table, fields, True, True)
-    duplicate_update_sql = makeValues(table, fields, True)
-    values_sql = makeValues(table, fields, False)
-    values_foreach_sql = makeValuesForeach(table, fields)
-    update_set = makeUpdateSelective(table, fields)
-    update_set_force = makeUpdate(table, fields)
-    update_where = makeUpdateWhere(table)
+    where_if = make_sql_where_all(fields)
+    where_pk_if = make_sql_where_pk(table)
+    columns_sql = make_sql_columns(table, fields, False, False)
+    columns_alias_sql = make_sql_columns(table, fields, True, False)
+    pks_sql = make_sql_columns(table, fields, False, True)
+    pks_alias_sql = make_sql_columns(table, fields, True, True)
+    duplicate_update_sql = make_sql_values(table, fields, True)
+    values_sql = make_sql_values(table, fields, False)
+    values_foreach_sql = make_sql_foreach_values(table, fields)
+    update_set = make_sql_update_selective(table, fields)
+    update_set_force = make_sql_update(table, fields)
+    update_where = make_sql_update_where(table)
 
     return """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
@@ -312,13 +319,16 @@ def make_internal_xml_file(_c_info, _p_info, table, fields):
     </sql>
 
     <sql id="limitSql">
-        <!-- <if test="size != null">
-            limit #{{size}} 
-            <if test="page != null ">
-                offset (#{{size}}*(#{{page}}-1))
-            </if>
-           
-        </if> -->
+        <if test="size != null">
+            <choose>
+                <when test="page == null or 1 > page">
+                    LIMIT #{{size}}
+                </when>
+                <otherwise>
+                    LIMIT ((#{{page}}-1) * #{{size}}), #{{size}}
+                </otherwise>
+            </choose>
+        </if>
     </sql>
     
     <sql id="createSql">
@@ -390,15 +400,14 @@ def make_internal_xml_file(_c_info, _p_info, table, fields):
            , update_where=update_where
            , tname=tname
            , tname_alias=tname_alias
-           , duplicate_update= duplicate_update_sql)
+           , duplicate_update=duplicate_update_sql)
 
 
-def make_external_xml_file(_c_info, _p_info, table, fields, mapper_package, model_package):
+def make_xml_ex(_c_info, _p_info, table, fields, mapper_package, model_package):
     global _column_info
     global _package_path_info
     _column_info = _c_info
     _package_path_info = _p_info
-
 
     table_ns = table.table_namespace
     table_class_name = common.to_class_name(table.table_name)
@@ -423,15 +432,10 @@ def make_external_xml_file(_c_info, _p_info, table, fields, mapper_package, mode
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="{mapper_package}.{table_class_name}Mapper">
 
-    <!-- User can add specific conditions here for default select sql -->
-    <sql id="additionalWhereSql">
-    </sql>
-
     <sql id="selectSql">
         <include refid="{table_ns}.selectFromSql" />
         <where>
             <include refid="{table_ns}.ifConditionSql" />
-            <include refid="{mapper_package}.{table_class_name}Mapper.additionalWhereSql" />
         </where>
         <include refid="{table_ns}.limitSql" />
     </sql>

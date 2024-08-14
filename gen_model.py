@@ -7,8 +7,7 @@ _column_info = None
 _package_path_info = None
 
 
-# Model Core 생성
-def get_model_code(_c_info, _p_info, table, fields, mapper_package, model_gen_package):
+def make_java_domain_core(_c_info, _p_info, table, fields, mapper_package, model_gen_package):
     global _column_info
     global _package_path_info
     _column_info = _c_info
@@ -27,6 +26,8 @@ def get_model_code(_c_info, _p_info, table, fields, mapper_package, model_gen_pa
         , "public class {} extends BaseDomain".format(table_class_name)
         , "{"
     ]
+
+    write_only_source = []
 
     # 매개변수 추가
     for field in fields:
@@ -55,28 +56,38 @@ def get_model_code(_c_info, _p_info, table, fields, mapper_package, model_gen_pa
                 source.append('    @JsonProperty({})'.format(','.join(prop_str_list)))
 
         # 날짜 Type 인 경우
-        if (_column_info.is_use_date_format is True):
-            if field.type.startswith("date") or field.type.startswith("timestamp"):
-                source_prefix.append(common.make_import_code(_package_path_info.date_time_format))
-                source_prefix.append(common.make_import_code(_package_path_info.json_format))
-                source.append('    @DateTimeFormat(pattern="' + _column_info.date_format_pattern + '")')
-                source.append('    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "' + _column_info.date_format_pattern + '")')
-        # 날짜 시간 Type 인 경우
-        elif (_column_info.is_use_time_format is True):
+        if _column_info.is_use_date_format and field.is_date():
             source_prefix.append(common.make_import_code(_package_path_info.date_time_format))
             source_prefix.append(common.make_import_code(_package_path_info.json_format))
-            if field.type.startswith("datetime(3") or field.type.startswith("timestamp(3"):
+            source.append('    @DateTimeFormat(pattern="' + _column_info.date_format_pattern + '")')
+            source.append('    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "' + _column_info.date_format_pattern + '")')
+        # 날짜 시간 Type 인 경우
+        if (_column_info.is_use_time_format is True):
+            source_prefix.append(common.make_import_code(_package_path_info.date_time_format))
+            source_prefix.append(common.make_import_code(_package_path_info.json_format))
+            if field.is_datetime3():
                 source.append('    @DateTimeFormat(pattern="' + _column_info.date_time3_format_pattern + '")')
                 source.append('    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "' + _column_info.date_time3_format_pattern + '")')
-            elif field.type == 'datetime' or field.type == 'timestamp':
+            elif field.is_datetime():
                 source.append('    @DateTimeFormat(pattern="' + _column_info.date_time_format_pattern + '")')
                 source.append('    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "' + _column_info.date_time_format_pattern + '")')
-            elif field.type == 'time':
+            elif field.is_time():
                 source.append('    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "' + _column_info.time_format_pattern + '")')
 
         # Field 추가
         source.append("    private {} {};".format(field.java_type, field.java_field_name))
 
+        # 검색용 Field 추가 (WRITE_ONLY)
+        if field.is_date() or field.is_datetime() or field.is_datetime3() or field.is_time():
+            source_prefix.append(common.make_import_code(_package_path_info.json_property))
+            source_prefix.append(common.make_import_code(_package_path_info.json_format))
+
+            write_only_source.append('    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)')
+            write_only_source.append("    private {} {}{};".format(field.java_type, field.java_field_name,_column_info.period_search_start_postfix))
+            write_only_source.append('    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)')
+            write_only_source.append("    private {} {}{};".format(field.java_type, field.java_field_name,_column_info.period_search_end_postfix))
+
+    source += write_only_source
     source.append("}")
 
     source_prefix = list(set(source_prefix))
@@ -88,7 +99,7 @@ def get_model_code(_c_info, _p_info, table, fields, mapper_package, model_gen_pa
 
 
 # Model 생성
-def get_ex_model_code(_c_info, _p_info, table, fields, mapper_package, model_package):
+def make_java_domain_ex(_c_info, _p_info, table, fields, mapper_package, model_package):
     global _column_info
     global _package_path_info
     _column_info = _c_info

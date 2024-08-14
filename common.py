@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import re
-import gen_config_temp as config
+import config as config
 
 def replace(s, old, new, occurrence):
     li = s.rsplit(old, occurrence)
@@ -50,3 +50,16 @@ def make_package_code(package):
 def rreplace(s, old, new, occurrence):
     li = s.rsplit(old, occurrence)
     return new.join(li)
+
+def startswith_ignore_case(str1, *str2):
+    for prefix in str2:
+        if str1.lower().startswith(prefix.lower()):
+            return True
+    return False
+
+def endswith_ignore_case(str1, *str2):
+    for postfix in str2:
+        if str1.lower().endswith(postfix.lower()):
+            return True
+
+    return False

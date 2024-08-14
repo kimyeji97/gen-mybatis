@@ -24,23 +24,12 @@ _SP12 = ' ' * 12
 DB_ENGIN = ['postgresql', 'mysql']
 
 # gen 작업 디비 접속 옵션
-# DB_CONNECTION_OPTS = {
-#     'engin': DB_ENGIN[1]
-#     , 'options': {
-#         'host': 'metamarketing-instance-1.cnzcxy7quzcs.ap-northeast-2.rds.amazonaws.com'
-#         , 'port': 3306
-#         , 'database': 'metamarket'
-#         , 'user': 'adopadmin'
-#         , 'password': 'Adop*^14'
-#     }
-# }
-
 DB_CONNECTION_OPTS = {
     'engin': DB_ENGIN[1]
     , 'options': {
-        'host': 'insight-master.cnzcxy7quzcs.ap-northeast-2.rds.amazonaws.com'
+        'host': 'metamarketing-instance-1.cnzcxy7quzcs.ap-northeast-2.rds.amazonaws.com'
         , 'port': 3306
-        , 'database': 'insight'
+        , 'database': 'metamarket'
         , 'user': 'adopadmin'
         , 'password': 'Adop*^14'
     }

@@ -5,20 +5,21 @@ import sys, os
 
 sys.path.append(os.path.abspath("../"))
 
-import gen_mybatis_temp as gen
+import gen as gen
 
 arguments = sys.argv
-print(arguments)
 gen_targets = []
 category_targets = []
-all_targets = True
+print("CMD Arguments                      : ", arguments)
 
 for gt in arguments[1:]:
     if gt.startswith("-C"):
-        all_targets = False
         category_targets.append(gt[2:])
     else:
         gen_targets.append(gt)
+
+print("Generator target file              : ", 'ALL' if len(gen_targets) == 0 else gen_targets)
+print("Generator target category(package) : ", 'ALL' if len(category_targets) == 0 else category_targets)
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 _package_path_info = gen.PackagePathInfo(
@@ -45,6 +46,16 @@ _column_info = gen.ColumnInfo(
 )
 
 
+
+# gen.generate_mybatis(gen_targets,'테이블명', category, mapper_package, model_package, {
+#     'pk': '시퀀스명'
+#     , '필드명': {
+#         'field_name': ''
+#         , 'java_type': ''
+#         , 'json_props': ''
+#         , 'sequence_name': ''
+#     }
+# })
 def generate_mybatis_files():
     #########################################
     mapper_base_pkg = _package_path_info.mapper_package
@@ -52,30 +63,29 @@ def generate_mybatis_files():
     #########################################
 
     category = 'report'
-    if all_targets or category in category_targets:
+    if len(category_targets) == 0 or category in category_targets:
         mapper_package = mapper_base_pkg + "." + category
         model_package = model_base_pkg + "." + category
 
-        # gen.generate_mybatis(gen_targets,'테이블명', category, mapper_package, model_package, {
-        #     'pk': '시퀀스명'
-        #     , '필드명': {
-        #         'field_name': ''
-        #         , 'java_type': ''
-        #         , 'json_props': ''
-        #         , 'sequence_name': ''
-        #     }
-        # })
+        gen.generate_mybatis(gen_targets, 'adgroup_report', category, mapper_package, model_package)
 
-        gen.generate_mybatis(gen_targets,'i_daily_rev', category, mapper_package, model_package, {
-            'pk': 'rev_id'
-            # , 'id': {
-            #     'field_name': ''
-            #     , 'java_type': ''
-            #     , 'json_props': ''
-            #     , 'sequence_name': ''
-            # }
-        })
+
+    category = 'ad'
+    if len(category_targets) == 0 or category in category_targets:
+        mapper_package = mapper_base_pkg + "." + category
+        model_package = model_base_pkg + "." + category
+
+        gen.generate_mybatis(gen_targets, 'ad_info', category, mapper_package, model_package)
+        gen.generate_mybatis(gen_targets, 'adgroup_info', category, mapper_package, model_package)
+        gen.generate_mybatis(gen_targets, 'campaign_info', category, mapper_package, model_package)
 
 
 gen.set_base_info(_package_path_info, _column_info)
+
+print("\r\n============================================")
+print("Generate Start..!!")
+print("---------------------------------------------")
 generate_mybatis_files()
+print("---------------------------------------------")
+print("Generate Finish..!!")
+print("============================================")
